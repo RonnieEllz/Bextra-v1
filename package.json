@@ -1,0 +1,14 @@
+{
+  "name": "bextra",
+  "private": true,
+  "packageManager": "pnpm@12.21.0",
+  "scripts": {
+    "build": "corepack pnpm -r build",
+    "test": "corepack pnpm -r test",
+    "lint": "corepack pnpm -r lint",
+    "db:setup": "corepack pnpm --filter @bextra/database setup",
+    "db:migrate": "corepack pnpm --filter @bextra/database migrate",
+    "db:seed": "corepack pnpm --filter @bextra/database seed",
+    "db:reset": "corepack pnpm --filter @bextra/database reset"
+  }
+}
