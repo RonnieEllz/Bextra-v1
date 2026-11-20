@@ -26,7 +26,8 @@ export type TapBatch = z.infer<typeof tapBatchSchema>;
 export const topUpSchema = z.object({
   agentId: z.string().uuid(),
   cardId: z.string().uuid(),
-  amountMinor: z.number().int().positive(),
+  cardToken: z.string().min(1).optional(),
+  amountMinor: z.number().int().positive().refine(Number.isSafeInteger),
 });
 
 export type TopUp = z.infer<typeof topUpSchema>;

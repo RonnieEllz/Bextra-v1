@@ -1,8 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch()
 export class ProblemFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ProblemFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -13,12 +15,19 @@ export class ProblemFilter implements ExceptionFilter {
       : typeof (exception as { status?: number }).status === 'number'
         ? (exception as { status: number }).status
         : HttpStatus.INTERNAL_SERVER_ERROR;
-    const detail = exception instanceof Error ? exception.message : 'Unexpected error';
-    const code = typeof (exception as { code?: string }).code === 'string'
+    const detail = status >= 500 ? 'An unexpected error occurred' : exception instanceof Error ? exception.message : 'Unexpected error';
+    const code = status >= 500 ? 'INTERNAL_ERROR' : typeof (exception as { code?: string }).code === 'string'
       ? (exception as { code: string }).code
       : 'INTERNAL_ERROR';
-    const requestId = String(request.headers['x-request-id'] ?? crypto.randomUUID());
+    if (status >= 500) {
+      this.logger.error(exception instanceof Error ? exception.stack ?? exception.message : String(exception));
+    }
+    const headerRequestId = request.headers['x-request-id'];
+    const requestId = typeof headerRequestId === 'string' && headerRequestId.trim()
+      ? headerRequestId
+      : crypto.randomUUID();
 
+    response.setHeader('x-request-id', requestId);
     response.status(status).json({
       type: 'about:blank',
       title: status === 500 ? 'Internal Server Error' : 'Request Error',

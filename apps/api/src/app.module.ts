@@ -11,9 +11,10 @@ import { AuthController } from './modules/auth/auth.controller.js';
 import { AuthService } from './modules/auth/auth.service.js';
 import { AuthGuard } from './modules/auth/auth.guard.js';
 import { Reflector } from '@nestjs/core';
+import { MobileController, MobilePublicController } from './modules/mobile/mobile.controller.js';
 
 @Module({
-  controllers: [AuthController, GatewayController, FundingController, SettlementController, DevicesController, AdminController],
+  controllers: [AuthController, GatewayController, FundingController, SettlementController, DevicesController, AdminController, MobileController, MobilePublicController],
   providers: [GatewayService, FundingService, SettlementService, AuthService, AuthGuard, Reflector],
 })
 export class AppModule {}

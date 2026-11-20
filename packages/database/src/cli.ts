@@ -87,6 +87,8 @@ async function main() {
     await ensureDatabase(testUrl);
   } else if (command === 'migrate') {
     await migrate(devUrl);
+  } else if (command === 'reset-test') {
+    await reset(testUrl);
   } else if (command === 'seed') {
     await migrate(devUrl);
   } else if (command === 'reset') {

@@ -3,6 +3,25 @@ import { database } from '../../database.js';
 
 @Injectable()
 export class SettlementService {
+  async list(operatorId: string, cursor?: string) {
+    const result = await database.query(
+      `SELECT id, business_day, expected_minor, posted_minor, difference_minor, status,
+              override_reason, override_actor_id, override_at, paid_at, created_at
+       FROM settlements
+       WHERE operator_id = $1
+         AND ($2::uuid IS NULL OR id < $2::uuid)
+       ORDER BY business_day DESC, id DESC
+       LIMIT 51`,
+      [operatorId, cursor ?? null],
+    );
+    const hasNext = result.rows.length > 50;
+    const rows = result.rows.slice(0, 50);
+    return {
+      items: rows,
+      nextCursor: hasNext ? rows[rows.length - 1].id : null,
+    };
+  }
+
   async run(operatorId: string, businessDay: string, key: string) {
     if (!key) throw Object.assign(new Error('Idempotency key required'), { status: 400, code: 'IDEMPOTENCY_KEY_REQUIRED' });
     const totals = await database.query(
@@ -21,25 +40,35 @@ export class SettlementService {
          AND (tapped_at AT TIME ZONE 'Africa/Blantyre')::date = $2::date`,
       [operatorId, businessDay],
     );
-    const expected = await database.query(
-      `SELECT COALESCE(SUM(b.declared_count), 0)::bigint AS declared
-       FROM batches b WHERE b.operator_id = $1`,
-      [operatorId],
+    const batchTotals = await database.query(
+      `SELECT COALESCE(SUM(b.declared_count), 0)::bigint AS declared,
+              COALESCE(SUM(b.processed_count), 0)::bigint AS processed
+       FROM batches b
+       WHERE b.operator_id = $1
+         AND (b.created_at AT TIME ZONE 'Africa/Blantyre')::date = $2::date`,
+      [operatorId, businessDay],
     );
     const posted = BigInt(totals.rows[0].posted);
     const postedCount = BigInt(totals.rows[0].posted_count);
-    const declared = BigInt(expected.rows[0].declared);
-    const unsettled = offline.rows[0].count > 0 || declared !== postedCount;
+    const declared = BigInt(batchTotals.rows[0].declared);
+    const processed = BigInt(batchTotals.rows[0].processed);
+    const unsettled = offline.rows[0].count > 0 || declared !== processed || processed !== postedCount;
     const status = unsettled ? 'locked' : 'approved';
     const inserted = await database.query(
-      `INSERT INTO settlements(operator_id, business_day, expected_minor, posted_minor, difference_minor, status)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO settlements(
+         operator_id, business_day, expected_minor, posted_minor, difference_minor,
+         expected_tap_count, processed_tap_count, status
+       )
+       VALUES ($1, $2, $3, $3, 0, $4, $5, $6)
        ON CONFLICT(operator_id, business_day) DO UPDATE
-       SET posted_minor = EXCLUDED.posted_minor,
+       SET expected_minor = EXCLUDED.expected_minor,
+           posted_minor = EXCLUDED.posted_minor,
            difference_minor = EXCLUDED.difference_minor,
+           expected_tap_count = EXCLUDED.expected_tap_count,
+           processed_tap_count = EXCLUDED.processed_tap_count,
            status = CASE WHEN settlements.status = 'approved' THEN 'approved' ELSE EXCLUDED.status END
        RETURNING *`,
-      [operatorId, businessDay, posted, posted, '0', status],
+      [operatorId, businessDay, posted, declared, processed, status],
     );
     return inserted.rows[0];
   }

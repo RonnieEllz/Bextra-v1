@@ -5,11 +5,15 @@ export type BextraRole =
   | 'operator_admin'
   | 'operator_finance'
   | 'operator_fleet'
-  | 'auditor';
+  | 'agent'
+  | 'auditor'
+  | 'customer';
 
 export interface AuthContext {
   userId: string;
   externalId: string;
   role: BextraRole;
   operatorId: string | null;
+  agentId?: string | null;
+  cardToken?: string | null;
 }

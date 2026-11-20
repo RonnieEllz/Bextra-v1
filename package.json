@@ -6,9 +6,11 @@
     "build": "corepack pnpm -r build",
     "test": "corepack pnpm -r test",
     "lint": "corepack pnpm -r lint",
+    "portal": "corepack pnpm --filter @bextra/portal dev",
     "db:setup": "corepack pnpm --filter @bextra/database setup",
     "db:migrate": "corepack pnpm --filter @bextra/database migrate",
     "db:seed": "corepack pnpm --filter @bextra/database seed",
-    "db:reset": "corepack pnpm --filter @bextra/database reset"
+    "db:reset": "corepack pnpm --filter @bextra/database reset",
+    "db:reset-test": "corepack pnpm --filter @bextra/database reset-test"
   }
 }

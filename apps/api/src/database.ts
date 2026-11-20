@@ -7,6 +7,8 @@ dotenv.config({ path: fs.existsSync(cwdEnv) ? cwdEnv : workspaceEnv });
 import pg from 'pg';
 
 export const database = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.NODE_ENV === 'test'
+    ? process.env.TEST_DATABASE_URL
+    : process.env.DATABASE_URL,
   max: 10,
 });

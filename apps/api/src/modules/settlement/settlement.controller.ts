@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Inject, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { SettlementService } from './settlement.service.js';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { Roles } from '../auth/auth.decorator.js';
@@ -8,7 +8,19 @@ import { resolveOperatorId } from '../auth/tenant.js';
 @Controller('v1/settlements')
 @UseGuards(AuthGuard)
 export class SettlementController {
-  constructor(private readonly settlement: SettlementService) {}
+  constructor(@Inject(SettlementService) private readonly settlement: SettlementService) {}
+
+  @Get()
+  @Roles('platform_admin', 'platform_finance', 'operator_admin', 'operator_finance', 'auditor')
+  async list(
+    @Query('operatorId') requestedOperatorId: string,
+    @Query('cursor') cursor: string | undefined,
+    @Req() request: { auth: AuthContext },
+  ) {
+    const operatorId = resolveOperatorId(request.auth, requestedOperatorId);
+    const result = await this.settlement.list(operatorId, cursor);
+    return result;
+  }
 
   @Post('run')
   @Roles('platform_admin', 'platform_finance', 'operator_admin', 'operator_finance')
